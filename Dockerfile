@@ -1,46 +1,41 @@
 # -------- Stage 1: Build --------
+
 FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Set environment
-ENV NODE_ENV=production
-
-# Install dependencies first (better caching)
+# Copy package files and install dependencies
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy only required files
-COPY index.js ./
-COPY public ./public
+# Copy application code
+COPY . .
+
 
 # -------- Stage 2: Production --------
+    
 FROM node:18-alpine
 
 WORKDIR /app
 
-ENV NODE_ENV=production
-
-# Copy from builder
+# Copy dependencies and code from builder
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/index.js ./
-COPY --from=builder /app/public ./public
+COPY index.js ./
+COPY public ./public
 
-# Expose app port
+# Expose port
 EXPOSE 3000
 
-# Create non-root user
-RUN addgroup -S nodejs && adduser -S nodejs -G nodejs
-
-# Set ownership
-RUN chown -R nodejs:nodejs /app
+# Non-root user for security
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 && \
+    chown -R nodejs:nodejs /app
 
 USER nodejs
 
-# Healthcheck (improved)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD wget -qO- http://localhost:3000/api/hello || exit 1
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/api/hello', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
-# Start app
 CMD ["node", "index.js"]

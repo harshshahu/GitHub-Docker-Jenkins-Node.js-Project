@@ -1,63 +1,51 @@
 pipeline {
     agent any
-
+    
     environment {
-        DOCKER_HUB_REPO = 'harshshahu/basic-web-application'
-        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials'
-        GIT_REPO = 'https://github.com/harshshahu/GitHub-Docker-Jenkins-Node.js-Project.git'
-        IMAGE_TAG = "${BUILD_NUMBER}"
-        TEST_CONTAINER = "test-container-${BUILD_NUMBER}"
+        DOCKER_HUB_REPO = 'harshshahu/basic-web-application' // Docker Hub repository name
+        DOCKER_HUB_CREDENTIALS = 'dockerhub-credentials' // Jenkins credential ID
+        GIT_REPO = 'https://github.com/harshshahu/GitHub-Docker-Jenkins-Node.js-Project.git' // Git repository URL
+        IMAGE_TAG = "${BUILD_NUMBER}" // Use Jenkins build number as image tag
     }
-
+    
     stages {
-
         stage('Checkout') {
             steps {
-                echo 'Checking out code...'
+                echo 'Checking out code from Git...'
                 git branch: 'main', url: "${GIT_REPO}"
             }
         }
-
-        stage('Build Docker Image') {
+        
+        stage('Build') {
             steps {
+                echo 'Building Docker image...'
                 script {
-                    echo 'Building Docker image...'
-                    dockerImage = docker.build("${DOCKER_HUB_REPO}:${IMAGE_TAG}")
-                    dockerImage.tag("latest")  
+                    dockerImage = docker.build("${DOCKER_HUB_REPO}:${IMAGE_TAG}") // Build with specific tag
+                    docker.build("${DOCKER_HUB_REPO}:latest") // Also build with 'latest' tag
                 }
             }
         }
-
+        
         stage('Test') {
             steps {
+                echo 'Running tests...'
                 script {
-                    echo 'Running container for testing...'
-                    try {
-                        sh """
-                            docker run -d --name ${TEST_CONTAINER} -p 3001:3000 ${DOCKER_HUB_REPO}:${IMAGE_TAG}
-
-                            for i in {1..10}; do
-                                echo "Waiting for application to be ready... Attempt $i"
-                                curl -f http://localhost:3001/api/hello && break
-                                sleep 3
-                            done
-
-                            curl -f http://localhost:3001/api/hello
-                        """
-                    } finally {
-                        sh """
-                            docker stop ${TEST_CONTAINER} || true
-                            docker rm ${TEST_CONTAINER} || true
-                        """
-                    }
+                    // Run container and test API endpoint
+                    sh """
+                        docker run -d --name test-container -p 3001:3000 ${DOCKER_HUB_REPO}:${IMAGE_TAG} 
+                        sleep 5 
+                        curl -f http://localhost:3001/api/hello || exit 1
+                        docker stop test-container
+                        docker rm test-container
+                    """
                 }
             }
         }
-
-        stage('Push Image') {
+        
+        stage('Push to Docker Hub') {
             steps {
+                echo 'Pushing Docker image to Docker Hub...'
                 script {
-                    echo 'Pushing image to Docker Hub...'
                     docker.withRegistry('https://registry.hub.docker.com', "${DOCKER_HUB_CREDENTIALS}") {
                         dockerImage.push("${IMAGE_TAG}")
                         dockerImage.push("latest")
@@ -65,40 +53,37 @@ pipeline {
                 }
             }
         }
-
+        
         stage('Deploy') {
             steps {
+                echo 'Deploying application...'
                 script {
-                    echo 'Deploying application...'
                     sh """
-                        docker stop basic-webapp || true
-                        docker rm basic-webapp || true
-                        docker run -d --name basic-webapp -p 3000:3000 ${DOCKER_HUB_REPO}:latest
+                        docker stop basic-web-application || true
+                        docker rm basic-web-application || true
+                        docker run -d --name basic-web-application -p 3000:3000 ${DOCKER_HUB_REPO}:latest
                     """
                 }
             }
         }
-
+        
         stage('Health Check') {
             steps {
+                echo 'Performing health check...'
                 script {
-                    echo 'Checking application health...'
                     sh """
-                        for i in {1..10}; do
-                            curl -f http://localhost:3000/api/hello && exit 0
-                            sleep 3
-                        done
-                        echo "Health check failed!"
-                        exit 1
+                        sleep 5
+                        curl -f http://localhost:3000/api/hello || exit 1
+                        echo "Application is healthy!"
                     """
                 }
             }
         }
     }
-
+    
     post {
         always {
-            echo 'Cleaning up Docker...'
+            echo 'Cleaning up...'
             sh 'docker system prune -f'
         }
         success {
