@@ -94,6 +94,8 @@ resource "aws_instance" "Jenkins_VM" {
             "sudo git config --global user.name 'Harsh Shahu'",
             "sudo git config --global user.email 'shahuharsh22@gmail.com'",
 
+            "sudo yum install npm -y",
+
             "sudo yum install java-21-amazon-corretto.x86_64 -y",
 
             "sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/rpm-stable/jenkins.repo",

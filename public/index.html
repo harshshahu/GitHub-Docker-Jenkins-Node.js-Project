@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Basic-Web-Application</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Basic-Web-Application</h1>
+      <p id="message">Loading message...</p>
+      <button id="refresh">Refresh</button>
+    </main>
+    <script>
+      async function fetchMessage() {
+        try {
+          const res = await fetch('/api/hello');
+          const json = await res.json();
+          document.getElementById('message').textContent = json.message + ' (' + json.time + ')';
+        } catch (err) {
+          document.getElementById('message').textContent = 'Failed to load message';
+        }
+      }
+      document.getElementById('refresh').addEventListener('click', fetchMessage);
+      fetchMessage();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,9 @@
+:root{
+  --bg:#f7f9fc;
+  --card:#ffffff;
+  --accent:#0366d6;
+}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Arial,Helvetica,sans-serif;background:var(--bg);color:#0b1220}
+.container{max-width:640px;margin:6rem auto;padding:2rem;background:var(--card);box-shadow:0 6px 20px rgba(2,6,23,0.08);border-radius:12px;text-align:center}
+button{background:var(--accent);color:white;border:0;padding:0.6rem 1rem;border-radius:8px;cursor:pointer}
+button:hover{opacity:0.95}
